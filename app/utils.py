@@ -12,13 +12,15 @@ from bokeh.embed import autoload_static
 from bokeh.models import Span, Scale, FixedTicker, LinearColorMapper, ColorBar, BasicTicker, PrintfTickFormatter
 from bokeh.plotting import figure
 from bokeh.resources import INLINE
+from bokeh.sampledata.iris import flowers
+from bokeh.transform import factor_mark, factor_cmap
+import bokeh.models as bkm
 
 from app.settings import PORT, DOMAIN, PROTOCOL, SOURCES_FILE_PATH
 from bokeh.sampledata.unemployment1948 import data
 
 
 def get_total_infected_people_figure():
-
     with open(SOURCES_FILE_PATH) as f:
         source_data = json.load(f)
 
@@ -38,14 +40,28 @@ def get_total_infected_people_figure():
                  x_minor_ticks=5, y_range=(0, 50), x_range=(0, 50), y_minor_ticks=5,
                  y_scale=Scale(),
                  toolbar_location='below',
-                 tools=TOOLS,
-                 tooltips=[('someTitle', 'Some information'), ('rate', '@rate')])
+                 tools=TOOLS, tooltips=[])
 
-    fig.rect(x='level_0',
-             y='level_1', width=1, height=1,
-             source=df,
-             fill_color={'field': 'rate', 'transform': mapper},
-             line_color=None)
+    rects = fig.rect(x='level_0',
+                     y='level_1', width=1, height=1,
+                     source=df,
+                     fill_color={'field': 'rate', 'transform': mapper},
+                     line_color=None)
+
+    SPECIES = ['setosa', 'versicolor', 'virginica']
+    MARKERS = ['hex', 'circle_x', 'triangle']
+
+    stars = fig.scatter("petal_length", "sepal_width", source=flowers, legend_field="species", fill_alpha=0.4, size=12,
+                        marker=factor_mark('species', MARKERS, SPECIES),
+                        color=factor_cmap('species', 'Category10_3', SPECIES))
+
+    g1_hover = bkm.HoverTool(renderers=[rects],
+                             tooltips=[('rects', 'rects')])
+
+    g2_hover = bkm.HoverTool(renderers=[stars],
+                             tooltips=[('stars', 'stars')])
+
+    fig.add_tools(g1_hover, g2_hover)
 
     color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="5pt",
                          ticker=BasicTicker(desired_num_ticks=len(colors)),
@@ -57,7 +73,6 @@ def get_total_infected_people_figure():
 
 
 def live_render_plot():
-
     fig = get_total_infected_people_figure()
 
     js, tag = autoload_static(fig, INLINE, f"{PROTOCOL}://{DOMAIN}:{PORT}/plot.js")
