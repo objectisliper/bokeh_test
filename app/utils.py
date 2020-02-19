@@ -8,8 +8,10 @@ import numpy as np
 import pandas as pd
 
 # Bokeh libraries
+from bokeh import events
 from bokeh.embed import autoload_static
-from bokeh.models import Span, Scale, FixedTicker, LinearColorMapper, ColorBar, BasicTicker, PrintfTickFormatter
+from bokeh.models import Span, Scale, FixedTicker, LinearColorMapper, ColorBar, BasicTicker, PrintfTickFormatter, \
+    CustomJS, ColumnDataSource, TapTool
 from bokeh.plotting import figure
 from bokeh.resources import INLINE
 from bokeh.sampledata.iris import flowers
@@ -18,6 +20,9 @@ import bokeh.models as bkm
 
 from app.settings import PORT, DOMAIN, PROTOCOL, SOURCES_FILE_PATH
 from bokeh.sampledata.unemployment1948 import data
+
+SPECIES = ['setosa', 'versicolor', 'virginica']
+MARKERS = ['hex', 'circle_x', 'triangle']
 
 
 def get_total_infected_people_figure():
@@ -48,10 +53,8 @@ def get_total_infected_people_figure():
                      fill_color={'field': 'rate', 'transform': mapper},
                      line_color=None)
 
-    SPECIES = ['setosa', 'versicolor', 'virginica']
-    MARKERS = ['hex', 'circle_x', 'triangle']
-
-    stars = fig.scatter("petal_length", "sepal_width", source=flowers, legend_field="species", fill_alpha=0.4, size=12,
+    stars = fig.scatter("petal_length", "sepal_width", source=flowers, legend_field="species",
+                        fill_alpha=0.4, size=12,
                         marker=factor_mark('species', MARKERS, SPECIES),
                         color=factor_cmap('species', 'Category10_3', SPECIES))
 
@@ -67,9 +70,32 @@ def get_total_infected_people_figure():
                          ticker=BasicTicker(desired_num_ticks=len(colors)),
                          formatter=PrintfTickFormatter(format="%d%%"),
                          label_standoff=6, border_line_color=None, location=(0, 0))
+
+    tap_tool_1 = TapTool(behavior='inspect', callback=CustomJS(args=dict(), code=get_callback_function('red')
+     ), renderers=[rects])
+
+    tap_tool_2 = TapTool(behavior='inspect', callback=CustomJS(args=dict(), code=get_callback_function('violet')
+     ), renderers=[stars])
+
+    fig.add_tools(tap_tool_1, tap_tool_2)
+
     fig.add_layout(color_bar, 'right')
 
     return fig
+
+
+def get_callback_function(color):
+    return """
+        const previous_element = document.getElementById("block-info");
+        if (previous_element) {
+            document.body.removeChild(previous_element)
+        }
+        var elem = document.createElement('div');
+        elem.style.cssText = 'position:absolute;width:100px;height:100px;top: 10px;left:10px;background-color:%s;';
+        elem.id = 'block-info';
+        elem.innerHTML = cb_data.geometries['x'].toFixed(0) + " " + cb_data.geometries['y'].toFixed(0);
+        document.body.appendChild(elem);
+        """ % color
 
 
 def live_render_plot():
