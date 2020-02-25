@@ -8,10 +8,44 @@
             }
         </style>
     </head>
-    <script>
+    <script
+      src="https://code.jquery.com/jquery-3.4.1.min.js"
+      integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+      crossorigin="anonymous"></script>
+    <script id="plot_js">
         {{ embed_js|safe }}
     </script>
+    <script>
+        {{ slider_js|safe }}
+    </script>
+    <script>
+        function slider_event(slider_value)
+        {
+            let request={}, args = {};
+            args['slider_value'] = slider_value;
+            request['args'] = JSON.stringify(args);
+            $.ajax({
+                url: '/api_endpoint',
+                type: 'POST',
+                data: request,
+                cache:false,
+                success: function (response) {
+                    $('#plot').html(response['html']);
+                    $('#plot_js').remove();
+                    eval(response['js']);
+                    console.log(response);
+
+                },
+                error: function(response){
+
+                }
+            });
+        }
+    </script>
 <body>
-    {{ embed_bokeh_html|safe }}
+    {{ slider_html|safe }}
+    <div id="plot">
+        {{ embed_bokeh_html|safe }}
+    </div>
 </body>
 </html>

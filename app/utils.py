@@ -10,8 +10,9 @@ import pandas as pd
 # Bokeh libraries
 from bokeh import events
 from bokeh.embed import autoload_static
+from bokeh.layouts import column
 from bokeh.models import Span, Scale, FixedTicker, LinearColorMapper, ColorBar, BasicTicker, PrintfTickFormatter, \
-    CustomJS, ColumnDataSource, TapTool
+    CustomJS, ColumnDataSource, TapTool, Slider
 from bokeh.plotting import figure
 from bokeh.resources import INLINE
 from bokeh.sampledata.iris import flowers
@@ -25,7 +26,7 @@ SPECIES = ['setosa', 'versicolor', 'virginica']
 MARKERS = ['hex', 'circle_x', 'triangle']
 
 
-def get_total_infected_people_figure():
+def get_total_infected_people_figure(colors):
     with open(SOURCES_FILE_PATH) as f:
         source_data = json.load(f)
 
@@ -33,7 +34,6 @@ def get_total_infected_people_figure():
 
     df = pd.DataFrame(df.stack(), columns=['rate']).reset_index()
 
-    colors = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
     mapper = LinearColorMapper(palette=colors, low=df.rate.min(), high=df.rate.max())
 
     TOOLS = "hover,save,pan,box_zoom,reset,wheel_zoom"
@@ -84,6 +84,13 @@ def get_total_infected_people_figure():
     return fig
 
 
+def get_slider_callback_function():
+    return """
+        const slider_value = cb_obj.value;
+        slider_event(slider_value);
+    """
+
+
 def get_callback_function(color):
     return """
         const previous_element = document.getElementById("block-info");
@@ -98,8 +105,27 @@ def get_callback_function(color):
         """ % color
 
 
+def get_slider():
+    slider = Slider(start=0.1, end=4, value=1, step=.1, title="power")
+
+    slider.js_on_change('value', CustomJS(args=dict(), code=get_slider_callback_function()))
+
+    js, tag = autoload_static(slider, INLINE, f"{PROTOCOL}://{DOMAIN}:{PORT}/plot.js")
+
+    return tag, js
+
+
 def live_render_plot():
-    fig = get_total_infected_people_figure()
+    fig = get_total_infected_people_figure(["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878",
+                                            "#933b41", "#550b1d"])
+
+    js, tag = autoload_static(fig, INLINE, f"{PROTOCOL}://{DOMAIN}:{PORT}/plot.js")
+
+    return tag, js
+
+
+def live_render_plot_update_example():
+    fig = get_total_infected_people_figure(["#75968f", "#933b41", "#550b1d"])
 
     js, tag = autoload_static(fig, INLINE, f"{PROTOCOL}://{DOMAIN}:{PORT}/plot.js")
 
